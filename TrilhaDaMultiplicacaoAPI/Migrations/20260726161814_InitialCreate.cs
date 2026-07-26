@@ -17,13 +17,13 @@ namespace TrilhaDaMultiplicacaoAPI.Migrations
                 name: "Alunos",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    Nome = table.Column<string>(type: "TEXT", nullable: false),
-                    Email = table.Column<string>(type: "TEXT", nullable: false),
-                    SenhaHash = table.Column<string>(type: "TEXT", nullable: false),
-                    AvatarEmoji = table.Column<string>(type: "TEXT", nullable: false),
-                    CriadoEm = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Nome = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Email = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    SenhaHash = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    AvatarEmoji = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CriadoEm = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -34,12 +34,12 @@ namespace TrilhaDaMultiplicacaoAPI.Migrations
                 name: "Conquistas",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    Titulo = table.Column<string>(type: "TEXT", nullable: false),
-                    Descricao = table.Column<string>(type: "TEXT", nullable: false),
-                    Icone = table.Column<string>(type: "TEXT", nullable: false),
-                    FasesConcluidasNecessarias = table.Column<int>(type: "INTEGER", nullable: false)
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Titulo = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Descricao = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Icone = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    FasesConcluidasNecessarias = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -50,13 +50,13 @@ namespace TrilhaDaMultiplicacaoAPI.Migrations
                 name: "FasesProgresso",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    AlunoId = table.Column<int>(type: "INTEGER", nullable: false),
-                    NumeroFase = table.Column<int>(type: "INTEGER", nullable: false),
-                    Estrelas = table.Column<int>(type: "INTEGER", nullable: false),
-                    Pontos = table.Column<int>(type: "INTEGER", nullable: false),
-                    ConcluidaEm = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    AlunoId = table.Column<int>(type: "int", nullable: false),
+                    NumeroFase = table.Column<int>(type: "int", nullable: false),
+                    Estrelas = table.Column<int>(type: "int", nullable: false),
+                    Pontos = table.Column<int>(type: "int", nullable: false),
+                    ConcluidaEm = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -70,12 +70,36 @@ namespace TrilhaDaMultiplicacaoAPI.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "PasswordResetTokens",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    AlunoId = table.Column<int>(type: "int", nullable: false),
+                    CodigoHash = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    TentativasFalhas = table.Column<int>(type: "int", nullable: false),
+                    ExpiraEm = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UsadoEm = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CriadoEm = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PasswordResetTokens", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PasswordResetTokens_Alunos_AlunoId",
+                        column: x => x.AlunoId,
+                        principalTable: "Alunos",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "AlunoConquistas",
                 columns: table => new
                 {
-                    AlunoId = table.Column<int>(type: "INTEGER", nullable: false),
-                    ConquistaId = table.Column<int>(type: "INTEGER", nullable: false),
-                    DesbloqueadaEm = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    AlunoId = table.Column<int>(type: "int", nullable: false),
+                    ConquistaId = table.Column<int>(type: "int", nullable: false),
+                    DesbloqueadaEm = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -120,6 +144,11 @@ namespace TrilhaDaMultiplicacaoAPI.Migrations
                 table: "FasesProgresso",
                 columns: new[] { "AlunoId", "NumeroFase" },
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PasswordResetTokens_AlunoId",
+                table: "PasswordResetTokens",
+                column: "AlunoId");
         }
 
         /// <inheritdoc />
@@ -130,6 +159,9 @@ namespace TrilhaDaMultiplicacaoAPI.Migrations
 
             migrationBuilder.DropTable(
                 name: "FasesProgresso");
+
+            migrationBuilder.DropTable(
+                name: "PasswordResetTokens");
 
             migrationBuilder.DropTable(
                 name: "Conquistas");
