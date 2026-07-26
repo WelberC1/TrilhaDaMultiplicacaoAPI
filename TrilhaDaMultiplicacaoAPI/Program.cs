@@ -1,5 +1,6 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using TrilhaDaMultiplicacaoAPI.Data;
@@ -24,6 +25,7 @@ namespace TrilhaDaMultiplicacaoAPI
                 options.UseSqlite(builder.Configuration.GetConnectionString("Default")));
 
             builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
+            builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection(SmtpOptions.SectionName));
 
             builder.Services.AddScoped<ITokenService, TokenService>();
             builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
@@ -33,8 +35,27 @@ namespace TrilhaDaMultiplicacaoAPI
             builder.Services.AddScoped<IRankingService, RankingService>();
             builder.Services.AddScoped<IConquistaService, ConquistaService>();
 
+            var smtpHost = builder.Configuration[$"{SmtpOptions.SectionName}:Host"];
+            if (string.IsNullOrWhiteSpace(smtpHost))
+                builder.Services.AddScoped<IEmailSender, ConsoleEmailSender>();
+            else
+                builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
+
             builder.Services.AddExceptionHandler<ApiExceptionHandler>();
             builder.Services.AddProblemDetails();
+
+            builder.Services.Configure<ApiBehaviorOptions>(options =>
+            {
+                options.InvalidModelStateResponseFactory = context =>
+                {
+                    var mensagem = context.ModelState.Values
+                        .SelectMany(v => v.Errors)
+                        .Select(e => e.ErrorMessage)
+                        .FirstOrDefault() ?? "Dados inválidos.";
+
+                    return new BadRequestObjectResult(new { mensagem });
+                };
+            });
 
             var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()!;
             builder.Services

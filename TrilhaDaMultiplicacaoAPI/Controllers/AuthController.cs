@@ -36,4 +36,32 @@ public class AuthController(IAuthService authService) : ControllerBase
             return StatusCode(ex.StatusCode, new { mensagem = ex.Message });
         }
     }
+
+    [HttpPost("esqueci-senha")]
+    public async Task<ActionResult> EsqueciSenha(EsqueciSenhaRequest request)
+    {
+        try
+        {
+            await authService.EsqueciSenhaAsync(request);
+            return Ok(new { mensagem = "Se o e-mail existir, enviamos um código de recuperação." });
+        }
+        catch (ApiException ex)
+        {
+            return StatusCode(ex.StatusCode, new { mensagem = ex.Message });
+        }
+    }
+
+    [HttpPost("redefinir-senha")]
+    public async Task<ActionResult> RedefinirSenha(RedefinirSenhaRequest request)
+    {
+        try
+        {
+            await authService.RedefinirSenhaAsync(request);
+            return Ok(new { mensagem = "Senha redefinida com sucesso!" });
+        }
+        catch (ApiException ex)
+        {
+            return StatusCode(ex.StatusCode, new { mensagem = ex.Message });
+        }
+    }
 }
