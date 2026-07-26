@@ -4,8 +4,11 @@ Backend em ASP.NET Core (.NET 10) para o [Trilha da Multiplicação](https://git
 
 ## Estado atual — esboço básico e funcional
 
-- **Autenticação**: registro e login com senha (BCrypt) + JWT (7 dias de validade).
+- **Autenticação**: registro e login por usuário com senha (BCrypt) + JWT (24h de validade).
+- **Segurança**: rate limiting (5 req/min em rotas de auth, 100 req/min global), bloqueio de conta após 5 logins errados (15 min), revogação de token via *security stamp* (logout e troca de senha invalidam tokens já emitidos na hora), HSTS, CORS restritivo por padrão, headers de segurança básicos, segredos fora do repositório (`dotnet user-secrets`/variável de ambiente, com validação de startup que recusa subir sem uma chave JWT forte).
 - **Recuperação de senha**: fluxo real por e-mail (código de 6 dígitos, expira em 15 min, bloqueia após 5 tentativas erradas). Envio via SMTP (MailKit) com fallback para log no console quando `Smtp:Host` não está configurado.
+- **Troca de senha autenticada**: usuário já logado troca a senha sem precisar do fluxo de e-mail.
+- **Logout de verdade**: invalida o token atual no servidor (não é só o cliente esquecer o token).
 - **Perfil do aluno**: consultar e atualizar nome, e-mail e avatar.
 - **Progresso**: registrar conclusão de fase (estrelas → pontos) e consultar progresso salvo.
 - **Ranking**: lista de alunos ordenada por pontos totais.
@@ -14,11 +17,9 @@ Backend em ASP.NET Core (.NET 10) para o [Trilha da Multiplicação](https://git
 
 ## O que falta (próximos passos)
 
-- Troca de senha autenticada (usuário já logado, sem passar pelo fluxo de "esqueci minha senha").
-- Refresh token / revogação de token.
+- Refresh token (hoje o token dura 24h fixas; revogação antecipada já existe via security stamp, mas não há renovação silenciosa).
 - Validação mais rica de fases (ex.: impedir pular fases fora de ordem, se isso vier a importar no servidor).
 - Testes automatizados.
-- Trocar a chave JWT e as credenciais SMTP em `appsettings.json` por segredos de produção (via variável de ambiente ou `dotnet user-secrets`) antes de qualquer deploy.
 
 ## Arquitetura
 
@@ -53,6 +54,8 @@ Todos exceto `/api/auth/*` exigem `Authorization: Bearer <token>`.
 | GET | `/api/conquistas` | Catálogo de conquistas com estado desbloqueada/bloqueada para o aluno atual. |
 | POST | `/api/auth/esqueci-senha` | Envia um código de recuperação de 6 dígitos por e-mail (sempre 200, não revela se o e-mail existe). |
 | POST | `/api/auth/redefinir-senha` | Confirma o código e define a nova senha. |
+| POST | `/api/auth/logout` | Revoga o token atual (autenticado). |
+| PUT | `/api/alunos/me/senha` | Troca a senha do aluno autenticado (pede a senha atual). |
 
 Exemplos de requisição prontos em [`TrilhaDaMultiplicacaoAPI/TrilhaDaMultiplicacaoAPI.http`](TrilhaDaMultiplicacaoAPI/TrilhaDaMultiplicacaoAPI.http).
 
@@ -60,11 +63,30 @@ Exemplos de requisição prontos em [`TrilhaDaMultiplicacaoAPI/TrilhaDaMultiplic
 
 Pré-requisitos: [.NET 10 SDK](https://dotnet.microsoft.com/download) e uma instância de SQL Server acessível (local, LocalDB, Docker etc.). A connection string padrão em `appsettings.json` (`Server=localhost;Database=TrilhaDaMultiplicacao;Trusted_Connection=True;TrustServerCertificate=True`) usa autenticação do Windows contra uma instância local chamada `localhost` — ajuste conforme seu ambiente.
 
+A API **recusa subir** sem uma chave JWT forte configurada (mínimo 32 bytes) — `appsettings.json` não tem mais nenhum segredo real. Configure localmente via `dotnet user-secrets` (uma vez só, por máquina de dev):
+
+```bash
+cd TrilhaDaMultiplicacaoAPI
+dotnet user-secrets set "Jwt:Chave" "<uma-string-aleatoria-forte-aqui>"
+```
+
+Depois:
+
 ```bash
 dotnet run --project TrilhaDaMultiplicacaoAPI --urls http://localhost:5271
 ```
 
 O banco e as tabelas são criados/migrados automaticamente no primeiro start (`db.Database.Migrate()`). Em desenvolvimento, o OpenAPI fica disponível em `/openapi/v1.json`.
+
+### Publicando em produção
+
+Nunca reaproveite a chave de desenvolvimento. Configure via variável de ambiente no serviço de hospedagem (convenção do ASP.NET Core: `__` separa seção/chave):
+
+- `Jwt__Chave` — string aleatória forte, só usada em produção.
+- `Smtp__Host`, `Smtp__Usuario`, `Smtp__Senha`, `Smtp__RemetenteEmail` — credenciais SMTP reais (sem isso, a recuperação de senha só loga o código no console, ninguém recebe e-mail de verdade).
+- `ConnectionStrings__Default` — string de conexão do SQL Server de produção.
+
+A chave JWT que ficou commitada no histórico deste repositório (antes deste hardening) deve ser considerada **permanentemente comprometida** — nunca reutilize esse valor.
 
 ## Integração com o app desktop
 

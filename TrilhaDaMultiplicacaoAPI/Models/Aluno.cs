@@ -10,6 +10,12 @@ public class Aluno
     public string AvatarEmoji { get; set; } = "🦉";
     public DateTime CriadoEm { get; set; } = DateTime.UtcNow;
 
+    public int TentativasLoginFalhas { get; set; }
+    public DateTime? BloqueadoAte { get; set; }
+
+    /// <summary>Rotacionado a cada logout ou troca de senha, pra invalidar tokens já emitidos antes de expirarem.</summary>
+    public Guid SecurityStamp { get; set; } = Guid.NewGuid();
+
     public List<FaseProgresso> Progresso { get; set; } = [];
     public List<AlunoConquista> Conquistas { get; set; } = [];
 

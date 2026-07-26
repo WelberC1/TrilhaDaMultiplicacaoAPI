@@ -14,12 +14,15 @@ public interface IAuthService
     Task<AuthResponse> LoginAsync(LoginRequest request);
     Task EsqueciSenhaAsync(EsqueciSenhaRequest request);
     Task RedefinirSenhaAsync(RedefinirSenhaRequest request);
+    Task LogoutAsync(int alunoId);
 }
 
 public class AuthService(AppDbContext db, ITokenService tokenService, IEmailSender emailSender) : IAuthService
 {
     private const int MinutosExpiracaoCodigo = 15;
-    private const int MaximoTentativasFalhas = 5;
+    private const int MaximoTentativasFalhas = 10;
+    private const int MaximoTentativasLogin = 10;
+    private const int MinutosBloqueioLogin = 15;
 
     public async Task<AuthResponse> RegistrarAsync(RegistrarRequest request)
     {
@@ -54,8 +57,26 @@ public class AuthService(AppDbContext db, ITokenService tokenService, IEmailSend
             .Include(a => a.Progresso)
             .FirstOrDefaultAsync(a => a.NomeUsuario == nomeUsuario);
 
+        if (aluno is not null && aluno.BloqueadoAte > DateTime.UtcNow)
+            throw new NaoAutorizadoException("Conta temporariamente bloqueada por muitas tentativas. Tente novamente mais tarde.");
+
         if (aluno is null || !BCrypt.Net.BCrypt.Verify(request.Senha, aluno.SenhaHash))
+        {
+            if (aluno is not null)
+            {
+                aluno.TentativasLoginFalhas++;
+                if (aluno.TentativasLoginFalhas >= MaximoTentativasLogin)
+                    aluno.BloqueadoAte = DateTime.UtcNow.AddMinutes(MinutosBloqueioLogin);
+
+                await db.SaveChangesAsync();
+            }
+
             throw new NaoAutorizadoException("Usuário ou senha inválidos.");
+        }
+
+        aluno.TentativasLoginFalhas = 0;
+        aluno.BloqueadoAte = null;
+        await db.SaveChangesAsync();
 
         return new AuthResponse(tokenService.GerarToken(aluno), ParaResponse(aluno));
     }
@@ -111,7 +132,17 @@ public class AuthService(AppDbContext db, ITokenService tokenService, IEmailSend
         }
 
         aluno.SenhaHash = BCrypt.Net.BCrypt.HashPassword(request.NovaSenha);
+        aluno.SecurityStamp = Guid.NewGuid();
         token.UsadoEm = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+    }
+
+    public async Task LogoutAsync(int alunoId)
+    {
+        var aluno = await db.Alunos.FirstOrDefaultAsync(a => a.Id == alunoId)
+            ?? throw new NaoEncontradoException("Aluno não encontrado.");
+
+        aluno.SecurityStamp = Guid.NewGuid();
         await db.SaveChangesAsync();
     }
 

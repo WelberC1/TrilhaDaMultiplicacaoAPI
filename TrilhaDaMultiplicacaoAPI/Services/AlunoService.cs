@@ -10,6 +10,7 @@ public interface IAlunoService
 {
     Task<AlunoResponse> ObterPerfilAsync(int alunoId);
     Task<AlunoResponse> AtualizarPerfilAsync(int alunoId, AtualizarPerfilRequest request);
+    Task AlterarSenhaAsync(int alunoId, AlterarSenhaRequest request);
 }
 
 public class AlunoService(AppDbContext db) : IAlunoService
@@ -36,6 +37,19 @@ public class AlunoService(AppDbContext db) : IAlunoService
         await db.SaveChangesAsync();
 
         return ParaResponse(aluno);
+    }
+
+    public async Task AlterarSenhaAsync(int alunoId, AlterarSenhaRequest request)
+    {
+        var aluno = await BuscarAlunoAsync(alunoId);
+
+        if (!BCrypt.Net.BCrypt.Verify(request.SenhaAtual, aluno.SenhaHash))
+            throw new NaoAutorizadoException("Senha atual incorreta.");
+
+        aluno.SenhaHash = BCrypt.Net.BCrypt.HashPassword(request.NovaSenha);
+        aluno.SecurityStamp = Guid.NewGuid();
+
+        await db.SaveChangesAsync();
     }
 
     private async Task<Aluno> BuscarAlunoAsync(int alunoId) =>

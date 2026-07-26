@@ -15,6 +15,9 @@ public interface ITokenService
 
 public class TokenService(IOptions<JwtOptions> jwtOptions) : ITokenService
 {
+    /// <summary>Nome da claim que carrega o <see cref="Aluno.SecurityStamp"/> no momento da emissão do token.</summary>
+    public const string SecurityStampClaimType = "stamp";
+
     private readonly JwtOptions _jwtOptions = jwtOptions.Value;
 
     public string GerarToken(Aluno aluno)
@@ -26,14 +29,15 @@ public class TokenService(IOptions<JwtOptions> jwtOptions) : ITokenService
         {
             new Claim(JwtRegisteredClaimNames.Sub, aluno.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, aluno.Email),
-            new Claim(ClaimTypes.Name, aluno.Nome)
+            new Claim(ClaimTypes.Name, aluno.Nome),
+            new Claim(SecurityStampClaimType, aluno.SecurityStamp.ToString())
         };
 
         var token = new JwtSecurityToken(
             issuer: _jwtOptions.Emissor,
             audience: _jwtOptions.Audiencia,
             claims: claims,
-            expires: DateTime.UtcNow.AddDays(7),
+            expires: DateTime.UtcNow.AddHours(24),
             signingCredentials: credenciais
         );
 

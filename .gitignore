@@ -34,6 +34,11 @@ artifacts/
 *.nuget.props
 *.nuget.targets
 
+# Segredos locais (use dotnet user-secrets / variáveis de ambiente em vez destes)
+appsettings.Development.json
+appsettings.Production.json
+appsettings.*.local.json
+
 # OS files
 .DS_Store
 Thumbs.db

@@ -9,3 +9,8 @@ public record AtualizarPerfilRequest(
     [Required, EmailAddress] string Email,
     [Required] string AvatarEmoji
 );
+
+public record AlterarSenhaRequest(
+    [Required] string SenhaAtual,
+    [Required, MinLength(6)] string NovaSenha
+);

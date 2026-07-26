@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using TrilhaDaMultiplicacaoAPI.Dtos;
 using TrilhaDaMultiplicacaoAPI.Exceptions;
 using TrilhaDaMultiplicacaoAPI.Services;
@@ -7,7 +9,8 @@ namespace TrilhaDaMultiplicacaoAPI.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-public class AuthController(IAuthService authService) : ControllerBase
+[EnableRateLimiting("auth")]
+public class AuthController(IAuthService authService, ICurrentUserService currentUser) : ControllerBase
 {
     [HttpPost("registrar")]
     public async Task<ActionResult<AuthResponse>> Registrar(RegistrarRequest request)
@@ -58,6 +61,21 @@ public class AuthController(IAuthService authService) : ControllerBase
         {
             await authService.RedefinirSenhaAsync(request);
             return Ok(new { mensagem = "Senha redefinida com sucesso!" });
+        }
+        catch (ApiException ex)
+        {
+            return StatusCode(ex.StatusCode, new { mensagem = ex.Message });
+        }
+    }
+
+    [HttpPost("logout")]
+    [Authorize]
+    public async Task<ActionResult> Logout()
+    {
+        try
+        {
+            await authService.LogoutAsync(currentUser.AlunoId);
+            return Ok(new { mensagem = "Sessão encerrada." });
         }
         catch (ApiException ex)
         {
