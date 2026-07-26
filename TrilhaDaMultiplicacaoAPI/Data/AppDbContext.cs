@@ -44,9 +44,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasForeignKey(t => t.AlunoId);
 
         modelBuilder.Entity<Conquista>().HasData(
-            new Conquista { Id = 1, Titulo = "Primeiros passos", Descricao = "Concluiu a primeira fase da trilha.", Icone = "🌱", FasesConcluidasNecessarias = 1 },
-            new Conquista { Id = 2, Titulo = "Pegando o jeito", Descricao = "Concluiu 3 fases da trilha.", Icone = "🔥", FasesConcluidasNecessarias = 3 },
-            new Conquista { Id = 3, Titulo = "Mestre da multiplicação", Descricao = "Concluiu 6 fases da trilha.", Icone = "🏆", FasesConcluidasNecessarias = 6 }
+            new Conquista { Id = 1, Titulo = "Primeiro Passo", Descricao = "Complete a sua primeira fase da trilha.", Icone = "🥇", TipoCriterio = TipoCriterioConquista.FasesConcluidas, ValorNecessario = 1 },
+            new Conquista { Id = 2, Titulo = "Trinca de Ouro", Descricao = "Consiga 3 estrelas em pelo menos uma fase.", Icone = "🌟", TipoCriterio = TipoCriterioConquista.FasesComTresEstrelas, ValorNecessario = 1 },
+            new Conquista { Id = 3, Titulo = "Sequência de Craque", Descricao = "Complete 3 fases da trilha.", Icone = "🔥", TipoCriterio = TipoCriterioConquista.FasesConcluidas, ValorNecessario = 3 },
+            new Conquista { Id = 4, Titulo = "Meio Caminho", Descricao = "Complete 6 fases da trilha.", Icone = "🏃", TipoCriterio = TipoCriterioConquista.FasesConcluidas, ValorNecessario = 6 },
+            new Conquista { Id = 5, Titulo = "Trilha Completa", Descricao = "Complete as 12 fases da trilha da multiplicação.", Icone = "🏆", TipoCriterio = TipoCriterioConquista.FasesConcluidas, ValorNecessario = 12 },
+            new Conquista { Id = 6, Titulo = "Estrela em Dobro", Descricao = "Consiga 3 estrelas em 5 fases diferentes.", Icone = "✨", TipoCriterio = TipoCriterioConquista.FasesComTresEstrelas, ValorNecessario = 5 },
+            new Conquista { Id = 7, Titulo = "Colecionador de Pontos", Descricao = "Acumule 300 pontos.", Icone = "💰", TipoCriterio = TipoCriterioConquista.PontosTotais, ValorNecessario = 300 },
+            new Conquista { Id = 8, Titulo = "Mestre da Trilha", Descricao = "Acumule 800 pontos.", Icone = "👑", TipoCriterio = TipoCriterioConquista.PontosTotais, ValorNecessario = 800 }
         );
     }
 }
