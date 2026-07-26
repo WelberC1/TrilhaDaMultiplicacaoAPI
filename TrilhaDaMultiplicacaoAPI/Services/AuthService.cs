@@ -23,7 +23,11 @@ public class AuthService(AppDbContext db, ITokenService tokenService, IEmailSend
 
     public async Task<AuthResponse> RegistrarAsync(RegistrarRequest request)
     {
+        var nomeUsuario = request.NomeUsuario.Trim().ToLowerInvariant();
         var email = request.Email.Trim().ToLowerInvariant();
+
+        if (await db.Alunos.AnyAsync(a => a.NomeUsuario == nomeUsuario))
+            throw new ConflitoException("Esse nome de usuário já está em uso.");
 
         if (await db.Alunos.AnyAsync(a => a.Email == email))
             throw new ConflitoException("Já existe uma conta com este e-mail.");
@@ -31,6 +35,7 @@ public class AuthService(AppDbContext db, ITokenService tokenService, IEmailSend
         var aluno = new Aluno
         {
             Nome = request.Nome.Trim(),
+            NomeUsuario = nomeUsuario,
             Email = email,
             SenhaHash = BCrypt.Net.BCrypt.HashPassword(request.Senha)
         };
@@ -43,14 +48,14 @@ public class AuthService(AppDbContext db, ITokenService tokenService, IEmailSend
 
     public async Task<AuthResponse> LoginAsync(LoginRequest request)
     {
-        var email = request.Email.Trim().ToLowerInvariant();
+        var nomeUsuario = request.NomeUsuario.Trim().ToLowerInvariant();
 
         var aluno = await db.Alunos
             .Include(a => a.Progresso)
-            .FirstOrDefaultAsync(a => a.Email == email);
+            .FirstOrDefaultAsync(a => a.NomeUsuario == nomeUsuario);
 
         if (aluno is null || !BCrypt.Net.BCrypt.Verify(request.Senha, aluno.SenhaHash))
-            throw new NaoAutorizadoException("E-mail ou senha inválidos.");
+            throw new NaoAutorizadoException("Usuário ou senha inválidos.");
 
         return new AuthResponse(tokenService.GerarToken(aluno), ParaResponse(aluno));
     }
@@ -116,5 +121,5 @@ public class AuthService(AppDbContext db, ITokenService tokenService, IEmailSend
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(codigo)));
 
     private static AlunoResponse ParaResponse(Aluno aluno) =>
-        new(aluno.Id, aluno.Nome, aluno.Email, aluno.AvatarEmoji, aluno.PontosTotais);
+        new(aluno.Id, aluno.Nome, aluno.NomeUsuario, aluno.Email, aluno.AvatarEmoji, aluno.PontosTotais);
 }

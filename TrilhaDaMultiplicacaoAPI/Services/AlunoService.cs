@@ -45,5 +45,5 @@ public class AlunoService(AppDbContext db) : IAlunoService
         ?? throw new NaoEncontradoException("Aluno não encontrado.");
 
     private static AlunoResponse ParaResponse(Aluno aluno) =>
-        new(aluno.Id, aluno.Nome, aluno.Email, aluno.AvatarEmoji, aluno.PontosTotais);
+        new(aluno.Id, aluno.Nome, aluno.NomeUsuario, aluno.Email, aluno.AvatarEmoji, aluno.PontosTotais);
 }

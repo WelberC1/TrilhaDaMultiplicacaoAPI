@@ -17,6 +17,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasIndex(a => a.Email)
             .IsUnique();
 
+        modelBuilder.Entity<Aluno>()
+            .HasIndex(a => a.NomeUsuario)
+            .IsUnique();
+
         modelBuilder.Entity<FaseProgresso>()
             .HasIndex(p => new { p.AlunoId, p.NumeroFase })
             .IsUnique();

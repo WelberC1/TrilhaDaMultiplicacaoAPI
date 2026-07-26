@@ -4,12 +4,15 @@ namespace TrilhaDaMultiplicacaoAPI.Dtos;
 
 public record RegistrarRequest(
     [Required, MinLength(2)] string Nome,
+    [Required, MinLength(3), MaxLength(30), RegularExpression(@"^[a-zA-Z0-9_.]+$",
+        ErrorMessage = "O usuário só pode ter letras, números, ponto e underline.")]
+    string NomeUsuario,
     [Required, EmailAddress] string Email,
     [Required, MinLength(6)] string Senha
 );
 
 public record LoginRequest(
-    [Required, EmailAddress] string Email,
+    [Required] string NomeUsuario,
     [Required] string Senha
 );
 
