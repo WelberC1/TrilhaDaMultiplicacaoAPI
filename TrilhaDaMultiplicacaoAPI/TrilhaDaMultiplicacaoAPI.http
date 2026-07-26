@@ -1,0 +1,59 @@
+@TrilhaDaMultiplicacaoAPI_HostAddress = http://localhost:5271
+
+### Registrar aluno
+POST {{TrilhaDaMultiplicacaoAPI_HostAddress}}/api/auth/registrar
+Content-Type: application/json
+
+{
+  "nome": "Ana Teste",
+  "email": "ana@teste.com",
+  "senha": "123456"
+}
+
+### Login
+# @name login
+POST {{TrilhaDaMultiplicacaoAPI_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "ana@teste.com",
+  "senha": "123456"
+}
+
+### Perfil do aluno autenticado
+GET {{TrilhaDaMultiplicacaoAPI_HostAddress}}/api/alunos/me
+Authorization: Bearer {{login.response.body.token}}
+
+### Atualizar perfil
+PUT {{TrilhaDaMultiplicacaoAPI_HostAddress}}/api/alunos/me
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
+
+{
+  "nome": "Ana Silva",
+  "email": "ana@teste.com",
+  "avatarEmoji": "🐱"
+}
+
+### Registrar conclusão da fase 1
+POST {{TrilhaDaMultiplicacaoAPI_HostAddress}}/api/progresso/fases/1
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
+
+{
+  "estrelas": 3
+}
+
+### Obter progresso do aluno
+GET {{TrilhaDaMultiplicacaoAPI_HostAddress}}/api/progresso
+Authorization: Bearer {{login.response.body.token}}
+
+### Obter ranking
+GET {{TrilhaDaMultiplicacaoAPI_HostAddress}}/api/ranking
+Authorization: Bearer {{login.response.body.token}}
+
+### Obter conquistas
+GET {{TrilhaDaMultiplicacaoAPI_HostAddress}}/api/conquistas
+Authorization: Bearer {{login.response.body.token}}
+
+###

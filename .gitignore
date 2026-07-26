@@ -1,0 +1,45 @@
+## .NET / Visual Studio
+
+# Build results
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+publish/
+artifacts/
+
+# Visual Studio cache/options
+.vs/
+*.user
+*.userosscache
+*.suo
+*.userprefs
+
+# Rider
+.idea/
+*.sln.iml
+
+# VS Code
+.vscode/
+
+# NuGet
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+
+# Banco de dados local (SQLite)
+*.db
+*.db-shm
+*.db-wal
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
