@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TrilhaDaMultiplicacaoAPI.Data;
 using TrilhaDaMultiplicacaoAPI.Dtos;
+using TrilhaDaMultiplicacaoAPI.Exceptions;
 using TrilhaDaMultiplicacaoAPI.Models;
 
 namespace TrilhaDaMultiplicacaoAPI.Services;
@@ -22,6 +23,15 @@ public class ProgressoService(AppDbContext db, IConquistaService conquistaServic
 
     public async Task<FaseProgressoResponse> RegistrarConclusaoAsync(int alunoId, int numeroFase, RegistrarConclusaoRequest request)
     {
+        if (numeroFase > 1)
+        {
+            var faseAnteriorConcluida = await db.FasesProgresso
+                .AnyAsync(p => p.AlunoId == alunoId && p.NumeroFase == numeroFase - 1);
+
+            if (!faseAnteriorConcluida)
+                throw new ConflitoException($"Complete a fase {numeroFase - 1} antes de registrar a fase {numeroFase}.");
+        }
+
         var existente = await db.FasesProgresso
             .FirstOrDefaultAsync(p => p.AlunoId == alunoId && p.NumeroFase == numeroFase);
 

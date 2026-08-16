@@ -4,21 +4,19 @@ Backend em ASP.NET Core (.NET 10) para o [Trilha da Multiplicação](https://git
 
 ## Estado atual — esboço básico e funcional
 
-- **Autenticação**: registro e login por usuário com senha (BCrypt) + JWT (24h de validade).
-- **Segurança**: rate limiting (5 req/min em rotas de auth, 100 req/min global), bloqueio de conta após 5 logins errados (15 min), revogação de token via *security stamp* (logout e troca de senha invalidam tokens já emitidos na hora), HSTS, CORS restritivo por padrão, headers de segurança básicos, segredos fora do repositório (`dotnet user-secrets`/variável de ambiente, com validação de startup que recusa subir sem uma chave JWT forte).
+- **Autenticação**: registro e login por usuário com senha (BCrypt) + JWT (24h de validade) com refresh token (30 dias, rotacionado a cada uso) para renovação silenciosa sem pedir login de novo.
+- **Segurança**: rate limiting (5 req/min em rotas de auth, 100 req/min global), bloqueio de conta após 5 logins errados (15 min), revogação de token via *security stamp* (logout e troca de senha invalidam tokens já emitidos na hora, e também revogam todo refresh token ativo do aluno), HSTS, CORS restritivo por padrão, headers de segurança básicos, segredos fora do repositório (`dotnet user-secrets`/variável de ambiente, com validação de startup que recusa subir sem uma chave JWT forte).
 - **Recuperação de senha**: fluxo real por e-mail (código de 6 dígitos, expira em 15 min, bloqueia após 5 tentativas erradas). Envio via SMTP (MailKit) com fallback para log no console quando `Smtp:Host` não está configurado.
 - **Troca de senha autenticada**: usuário já logado troca a senha sem precisar do fluxo de e-mail.
-- **Logout de verdade**: invalida o token atual no servidor (não é só o cliente esquecer o token).
+- **Logout de verdade**: invalida o token atual e todo refresh token ativo no servidor (não é só o cliente esquecer o token).
 - **Perfil do aluno**: consultar e atualizar nome, e-mail e avatar.
-- **Progresso**: registrar conclusão de fase (estrelas → pontos) e consultar progresso salvo.
+- **Progresso**: registrar conclusão de fase (estrelas → pontos) e consultar progresso salvo; o servidor rejeita registrar uma fase fora de ordem (a fase anterior precisa estar concluída).
 - **Ranking**: lista de alunos ordenada por pontos totais.
 - **Conquistas**: catálogo fixo (seed), desbloqueadas automaticamente pelo número de fases concluídas.
 - Persistência em **SQL Server** via EF Core, criado/migrado automaticamente ao iniciar.
 
 ## O que falta (próximos passos)
 
-- Refresh token (hoje o token dura 24h fixas; revogação antecipada já existe via security stamp, mas não há renovação silenciosa).
-- Validação mais rica de fases (ex.: impedir pular fases fora de ordem, se isso vier a importar no servidor).
 - Testes automatizados.
 
 ## Arquitetura
@@ -44,8 +42,9 @@ Todos exceto `/api/auth/*` exigem `Authorization: Bearer <token>`.
 
 | Método | Rota | Descrição |
 |---|---|---|
-| POST | `/api/auth/registrar` | Cria conta e retorna token + perfil. |
-| POST | `/api/auth/login` | Autentica e retorna token + perfil. |
+| POST | `/api/auth/registrar` | Cria conta e retorna token + refresh token + perfil. |
+| POST | `/api/auth/login` | Autentica e retorna token + refresh token + perfil. |
+| POST | `/api/auth/refresh` | Troca um refresh token válido por um novo par de tokens (rotação: o refresh token usado é revogado). |
 | GET | `/api/alunos/me` | Perfil do aluno autenticado. |
 | PUT | `/api/alunos/me` | Atualiza nome, e-mail e avatar. |
 | GET | `/api/progresso` | Lista de fases concluídas pelo aluno. |
@@ -90,4 +89,4 @@ A chave JWT que ficou commitada no histórico deste repositório (antes deste ha
 
 ## Integração com o app desktop
 
-O app desktop (`TrilhaDaMultiplicacao.Desktop`) já consome esta API de verdade para login, registro, logout, recuperação de senha e edição de perfil (`Services/SessionService.cs` + `Services/ApiClient.cs`, base URL fixa em `http://localhost:5271`). Trilha/progresso/ranking/conquistas ainda são mockados no desktop, aguardando a próxima fase de integração.
+O app desktop (`TrilhaDaMultiplicacao.Desktop`) já consome esta API de verdade para login, registro, logout, recuperação de senha, edição de perfil, progresso, ranking e conquistas (`Services/SessionService.cs` + `Services/ApiClient.cs`, base URL fixa em `http://localhost:5271`). Nenhuma tela do desktop usa dado mockado — a integração está completa.

@@ -16,7 +16,9 @@ public record LoginRequest(
     [Required] string Senha
 );
 
-public record AuthResponse(string Token, AlunoResponse Aluno);
+public record AuthResponse(string Token, string RefreshToken, AlunoResponse Aluno);
+
+public record RefreshTokenRequest([Required] string RefreshToken);
 
 public record EsqueciSenhaRequest([Required, EmailAddress] string Email);
 

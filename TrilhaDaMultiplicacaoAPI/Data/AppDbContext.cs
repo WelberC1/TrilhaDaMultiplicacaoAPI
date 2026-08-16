@@ -10,6 +10,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Conquista> Conquistas => Set<Conquista>();
     public DbSet<AlunoConquista> AlunoConquistas => Set<AlunoConquista>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -42,6 +43,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasOne(t => t.Aluno)
             .WithMany()
             .HasForeignKey(t => t.AlunoId);
+
+        modelBuilder.Entity<RefreshToken>()
+            .HasOne(t => t.Aluno)
+            .WithMany()
+            .HasForeignKey(t => t.AlunoId);
+
+        modelBuilder.Entity<RefreshToken>()
+            .HasIndex(t => t.TokenHash)
+            .IsUnique();
 
         modelBuilder.Entity<Conquista>().HasData(
             new Conquista { Id = 1, Titulo = "Primeiro Passo", Descricao = "Complete a sua primeira fase da trilha.", Icone = "🥇", TipoCriterio = TipoCriterioConquista.FasesConcluidas, ValorNecessario = 1 },

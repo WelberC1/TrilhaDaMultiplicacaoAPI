@@ -50,6 +50,7 @@ public class AlunoService(AppDbContext db) : IAlunoService
         aluno.SecurityStamp = Guid.NewGuid();
 
         await db.SaveChangesAsync();
+        await db.RevogarRefreshTokensAsync(alunoId);
     }
 
     private async Task<Aluno> BuscarAlunoAsync(int alunoId) =>

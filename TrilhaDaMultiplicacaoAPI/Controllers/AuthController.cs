@@ -40,6 +40,20 @@ public class AuthController(IAuthService authService, ICurrentUserService curren
         }
     }
 
+    [HttpPost("refresh")]
+    public async Task<ActionResult<AuthResponse>> Refresh(RefreshTokenRequest request)
+    {
+        try
+        {
+            var resultado = await authService.RefreshAsync(request);
+            return Ok(resultado);
+        }
+        catch (ApiException ex)
+        {
+            return StatusCode(ex.StatusCode, new { mensagem = ex.Message });
+        }
+    }
+
     [HttpPost("esqueci-senha")]
     public async Task<ActionResult> EsqueciSenha(EsqueciSenhaRequest request)
     {

@@ -12,6 +12,7 @@ public interface IAuthService
 {
     Task<AuthResponse> RegistrarAsync(RegistrarRequest request);
     Task<AuthResponse> LoginAsync(LoginRequest request);
+    Task<AuthResponse> RefreshAsync(RefreshTokenRequest request);
     Task EsqueciSenhaAsync(EsqueciSenhaRequest request);
     Task RedefinirSenhaAsync(RedefinirSenhaRequest request);
     Task LogoutAsync(int alunoId);
@@ -23,6 +24,7 @@ public class AuthService(AppDbContext db, ITokenService tokenService, IEmailSend
     private const int MaximoTentativasFalhas = 10;
     private const int MaximoTentativasLogin = 10;
     private const int MinutosBloqueioLogin = 15;
+    private const int DiasExpiracaoRefreshToken = 30;
 
     public async Task<AuthResponse> RegistrarAsync(RegistrarRequest request)
     {
@@ -46,7 +48,10 @@ public class AuthService(AppDbContext db, ITokenService tokenService, IEmailSend
         db.Alunos.Add(aluno);
         await db.SaveChangesAsync();
 
-        return new AuthResponse(tokenService.GerarToken(aluno), ParaResponse(aluno));
+        var refreshToken = await CriarRefreshTokenAsync(aluno.Id);
+        await db.SaveChangesAsync();
+
+        return new AuthResponse(tokenService.GerarToken(aluno), refreshToken, ParaResponse(aluno));
     }
 
     public async Task<AuthResponse> LoginAsync(LoginRequest request)
@@ -76,9 +81,32 @@ public class AuthService(AppDbContext db, ITokenService tokenService, IEmailSend
 
         aluno.TentativasLoginFalhas = 0;
         aluno.BloqueadoAte = null;
+
+        var refreshToken = await CriarRefreshTokenAsync(aluno.Id);
         await db.SaveChangesAsync();
 
-        return new AuthResponse(tokenService.GerarToken(aluno), ParaResponse(aluno));
+        return new AuthResponse(tokenService.GerarToken(aluno), refreshToken, ParaResponse(aluno));
+    }
+
+    public async Task<AuthResponse> RefreshAsync(RefreshTokenRequest request)
+    {
+        var hash = HashToken(request.RefreshToken);
+        var tokenAtual = await db.RefreshTokens
+            .Include(t => t.Aluno)
+            .ThenInclude(a => a!.Progresso)
+            .FirstOrDefaultAsync(t => t.TokenHash == hash);
+
+        if (tokenAtual is null || tokenAtual.Aluno is null ||
+            tokenAtual.RevogadoEm is not null || tokenAtual.ExpiraEm <= DateTime.UtcNow)
+            throw new NaoAutorizadoException("Sessão expirada. Faça login novamente.");
+
+        tokenAtual.RevogadoEm = DateTime.UtcNow;
+
+        var aluno = tokenAtual.Aluno;
+        var novoRefreshToken = await CriarRefreshTokenAsync(aluno.Id);
+        await db.SaveChangesAsync();
+
+        return new AuthResponse(tokenService.GerarToken(aluno), novoRefreshToken, ParaResponse(aluno));
     }
 
     public async Task EsqueciSenhaAsync(EsqueciSenhaRequest request)
@@ -97,7 +125,7 @@ public class AuthService(AppDbContext db, ITokenService tokenService, IEmailSend
         db.PasswordResetTokens.Add(new PasswordResetToken
         {
             AlunoId = aluno.Id,
-            CodigoHash = HashCodigo(codigo),
+            CodigoHash = HashToken(codigo),
             ExpiraEm = DateTime.UtcNow.AddMinutes(MinutosExpiracaoCodigo)
         });
 
@@ -124,7 +152,7 @@ public class AuthService(AppDbContext db, ITokenService tokenService, IEmailSend
         if (aluno is null || token is null || token.TentativasFalhas >= MaximoTentativasFalhas)
             throw new NaoAutorizadoException("Código inválido ou expirado.");
 
-        if (token.CodigoHash != HashCodigo(request.Codigo.Trim()))
+        if (token.CodigoHash != HashToken(request.Codigo.Trim()))
         {
             token.TentativasFalhas++;
             await db.SaveChangesAsync();
@@ -135,6 +163,7 @@ public class AuthService(AppDbContext db, ITokenService tokenService, IEmailSend
         aluno.SecurityStamp = Guid.NewGuid();
         token.UsadoEm = DateTime.UtcNow;
         await db.SaveChangesAsync();
+        await db.RevogarRefreshTokensAsync(aluno.Id);
     }
 
     public async Task LogoutAsync(int alunoId)
@@ -144,12 +173,27 @@ public class AuthService(AppDbContext db, ITokenService tokenService, IEmailSend
 
         aluno.SecurityStamp = Guid.NewGuid();
         await db.SaveChangesAsync();
+        await db.RevogarRefreshTokensAsync(alunoId);
+    }
+
+    private async Task<string> CriarRefreshTokenAsync(int alunoId)
+    {
+        var bruto = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+
+        db.RefreshTokens.Add(new RefreshToken
+        {
+            AlunoId = alunoId,
+            TokenHash = HashToken(bruto),
+            ExpiraEm = DateTime.UtcNow.AddDays(DiasExpiracaoRefreshToken)
+        });
+
+        return bruto;
     }
 
     private static string GerarCodigo() => RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6");
 
-    private static string HashCodigo(string codigo) =>
-        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(codigo)));
+    private static string HashToken(string valor) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(valor)));
 
     private static AlunoResponse ParaResponse(Aluno aluno) =>
         new(aluno.Id, aluno.Nome, aluno.NomeUsuario, aluno.Email, aluno.AvatarEmoji, aluno.PontosTotais);
